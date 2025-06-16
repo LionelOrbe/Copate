@@ -1,10 +1,11 @@
+import { Colors } from '@/assets/Contants/Colors'
 import React from 'react'
 import { Button, Modal, StyleSheet, Text, View } from 'react-native'
 
 type ConfirmationModalProps = {
   showRestartModal: boolean
   setShowRestartModal: (value: boolean) => void
-  startTimer: (seconds: number) => void
+  stopTimer: () => void
 }
 
 const ConfirmationModal = (props: ConfirmationModalProps) => {
@@ -17,7 +18,7 @@ const ConfirmationModal = (props: ConfirmationModalProps) => {
            >
              <View style={styles.modalContainer}>
                <View style={styles.modalContent}>
-                 <Text style={styles.modalText}>¿Estás segura de que deseas reiniciar?</Text>
+                 <Text style={styles.modalText}>¿Estás segura de que deseas detener la cuenta?</Text>
                  <View style={styles.modalButtonContainer}>
                    <Button
                      title="Cancelar"
@@ -25,12 +26,12 @@ const ConfirmationModal = (props: ConfirmationModalProps) => {
                      color="#666"
                    />
                    <Button
-                     title="Reiniciar"
+                     title="Detener"
                      onPress={() => {
                        props.setShowRestartModal(false);
-                       props.startTimer(12);
+                       props.stopTimer();
                      }}
-                     color="#ff4444"
+                     color={Colors.primary}
                    />
                  </View>
                </View>
@@ -49,7 +50,7 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(0, 0, 0, 0.5)",
       },
       modalContent: {
-        backgroundColor: "white",
+        backgroundColor: Colors.background,
         padding: 20,
         borderRadius: 10,
         alignItems: "center",
@@ -63,13 +64,15 @@ const styles = StyleSheet.create({
         elevation: 5,
       },
       modalText: {
-        fontSize: 18,
+        fontSize: 16,
+        fontWeight: "bold",
         marginBottom: 20,
         textAlign: "center",
+        color: Colors.primary,
       },
       modalButtonContainer: {
         flexDirection: "row",
         justifyContent: "space-between",
-        gap: 10,
+        gap: 40,
       },
 })

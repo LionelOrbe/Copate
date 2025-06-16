@@ -1,18 +1,14 @@
 import { Colors } from "@/assets/Contants/Colors"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import Slider from '@react-native-community/slider'
-import * as BackgroundFetch from "expo-background-fetch"
 import * as Notifications from "expo-notifications"
-import * as TaskManager from "expo-task-manager"
-import { useEffect, useState } from "react"
+import { useFocusEffect } from "expo-router"
+import { useCallback, useRef, useState } from "react"
 import { Alert, Button, StyleSheet, Text, View } from "react-native"
 import { LiquidGauge } from 'react-native-liquid-gauge'
+import { SafeAreaView } from "react-native-safe-area-context"
 import ConfirmationModal from "./components/ConfirmationModal"
 
-// Nombre de la tarea en segundo plano
-const BACKGROUND_TIMER_TASK = "background-timer-task"
-
-// Configurar el comportamiento de las notificaciones
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
@@ -22,90 +18,41 @@ Notifications.setNotificationHandler({
   }),
 })
 
-// Definir la tarea en segundo plano
-TaskManager.defineTask(BACKGROUND_TIMER_TASK, async () => {
-  try {
-    const timerData = await AsyncStorage.getItem("timerData")
-
-    if (timerData) {
-      const { startTime, duration } = JSON.parse(timerData)
-      const currentTime = Date.now()
-      const elapsedTime = Math.floor((currentTime - startTime) / 1000)
-
-      if (elapsedTime >= duration) {
-        // El timer ha terminado
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: "¡Es hora de limpiarte!",
-            body: `Han pasado ${duration} horas.`,
-            sound: true,
-          },
-          trigger: null, // Mostrar inmediatamente
-        })
-
-        // Limpiar los datos del timer
-        await AsyncStorage.removeItem("timerData")
-
-        return BackgroundFetch.BackgroundFetchResult.NewData
-      }
-    }
-
-    return BackgroundFetch.BackgroundFetchResult.NoData
-  } catch (error) {
-    console.error("Error en background task:", error)
-    return BackgroundFetch.BackgroundFetchResult.Failed
-  }
-})
-
 export default function TimerApp() {
   const [timerRunning, setTimerRunning] = useState(false)
-  const [maxTime, setMaxTime] = useState(12)
-  const [remainingTime, setRemainingTime] = useState(12)
+  const [maxTime, setMaxTime] = useState(43200)
+  const [remainingTime, setRemainingTime] = useState(43200)
   const [showRestartModal, setShowRestartModal] = useState(false)
 
-  useEffect(() => {
-    // Registrar la tarea en segundo plano
-    registerBackgroundTask()
+  const timerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    // Solicitar permisos de notificaciones
-    requestNotificationPermissions()
+  const startCountdownFromRealTime = useCallback((remainingSeconds: number) => {
+    let timeLeft = remainingSeconds;
+    setRemainingTime(timeLeft);
 
-    // Verificar si hay un timer en progreso al iniciar la app
-    checkExistingTimer()
-
-    return () => {
-      // Limpiar interval si existe
-      if (timerInterval) {
-        clearInterval(timerInterval)
+    if (timerInterval) {
+      if (timerInterval.current) {
+        clearInterval(timerInterval.current);
       }
     }
-  }, [])
 
-  let timerInterval: ReturnType<typeof setInterval>
+    timerInterval.current = setInterval(() => {   
+      timeLeft -= 1;
+      setRemainingTime(timeLeft);
 
-  const registerBackgroundTask = async () => {
-    try {
-      await BackgroundFetch.registerTaskAsync(BACKGROUND_TIMER_TASK, {
-        minimumInterval: 15000, // Mínimo 15 segundos
-        stopOnTerminate: false,
-        startOnBoot: true,
-      })
-    } catch (error) {
-      console.error("Error registrando background task:", error)
-    }
-  }
+      if (timeLeft <= 0) {
+        if (timerInterval.current) {
+          clearInterval(timerInterval.current);
+        }
+        setTimerRunning(false);
+        setRemainingTime(0);
+        // Limpiar datos cuando termine
+        AsyncStorage.removeItem("timerData");
+      }
+    }, 1000);
+  }, []);
 
-  const requestNotificationPermissions = async () => {
-    const { status } = await Notifications.requestPermissionsAsync()
-    if (status !== "granted") {
-      Alert.alert(
-        "Permisos requeridos",
-        "Se necesitan permisos de notificaciones para que funcione el timer en segundo plano.",
-      )
-    }
-  }
-
-  const checkExistingTimer = async () => {
+  const checkExistingTimer = useCallback(async () => {
     try {
       const timerData = await AsyncStorage.getItem("timerData")
       if (timerData) {
@@ -113,16 +60,12 @@ export default function TimerApp() {
         const currentTime = Date.now()
         const elapsedTime = Math.floor((currentTime - startTime) / 1000)
 
-        if (elapsedTime < duration) {
-          // Hay un timer en progreso - calcular tiempo restante REAL
+        if (elapsedTime < duration) {         
           const remaining = duration - elapsedTime
           setTimerRunning(true)
           setRemainingTime(remaining)
-
-          // Iniciar countdown desde el tiempo restante REAL
           startCountdownFromRealTime(remaining)
         } else {
-          // El timer ya terminó, limpiar datos
           await AsyncStorage.removeItem("timerData")
           setTimerRunning(false)
           setRemainingTime(0)
@@ -131,54 +74,21 @@ export default function TimerApp() {
     } catch (error) {
       console.error("Error verificando timer existente:", error)
     }
-  }
+  }, [startCountdownFromRealTime])
 
-  const updateNotificationProgress = async (elapsedSeconds: number) => {
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: `Ha${elapsedSeconds === 1 ? '' : 'n'} pasado ${elapsedSeconds} hora${elapsedSeconds === 1 ? '' : 's'}.`,
-          sound: false,
-        },
-        trigger: null, // Mostrar inmediatamente
-      });
-    } catch (error) {
-      console.error("Error actualizando notificación de progreso:", error);
-    }
-  };
-
-  const startCountdownFromRealTime = (remainingSeconds: number) => {
-    let timeLeft = remainingSeconds;
-    const totalSeconds = remainingSeconds;
-    setRemainingTime(timeLeft);
-
-    if (timerInterval) {
-      clearInterval(timerInterval);
-    }
-
-    timerInterval = setInterval(() => {
-      const elapsedSeconds = totalSeconds - timeLeft;
-      timeLeft -= 1;
-      setRemainingTime(timeLeft);
-
-      // Actualizar notificación de progreso
-      elapsedSeconds && updateNotificationProgress(elapsedSeconds);
-
-      if (timeLeft <= 0) {
-        clearInterval(timerInterval);
-        setTimerRunning(false);
-        setRemainingTime(0);
-        // Limpiar datos cuando termine
-        AsyncStorage.removeItem("timerData");
+  useFocusEffect(() => {
+    checkExistingTimer();
+    return () => {
+       if (timerInterval.current) {
+        clearInterval(timerInterval.current);
       }
-    }, 1000);
-  }
+    };
+  });
 
   const startTimer = async (seconds: number) => {
     try {
       setTimerRunning(true)
-
-      // Guardar datos del timer en AsyncStorage con timestamp actual
+ 
       const timerData = {
         startTime: Date.now(),
         duration: seconds,
@@ -186,11 +96,10 @@ export default function TimerApp() {
 
       await AsyncStorage.setItem("timerData", JSON.stringify(timerData))
 
-      // Programar notificación para cuando termine el tiempo
       await Notifications.scheduleNotificationAsync({
         content: {
           title: "¡Es hora de limpiarte!",
-          body: `Han pasado ${seconds} horas.`,
+          body: `Han pasado ${seconds/3600} horas.`,
           sound: true,
         },
         trigger: {
@@ -199,8 +108,18 @@ export default function TimerApp() {
           repeats: false,
         },
       })
-
-      // Iniciar countdown desde el tiempo completo
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "¡Ya paso la mitad del tiempo!",        
+          sound: false,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: seconds/2,
+          repeats: false,
+        },
+      })
+      // Iniciar el intervalo de countdown desde el tiempo restante REAL
       startCountdownFromRealTime(seconds)
     } catch (error) {
       console.error("Error iniciando timer:", error)
@@ -211,38 +130,34 @@ export default function TimerApp() {
 
   const stopTimer = async () => {
     try {
-      // Cancelar notificaciones programadas
-      await Notifications.cancelAllScheduledNotificationsAsync();
-
-      // Limpiar datos del timer
-      await AsyncStorage.removeItem("timerData");
-
-      // Limpiar estado
       setTimerRunning(false);
-      setRemainingTime(0);
-
-      if (timerInterval) {
-        clearInterval(timerInterval);
+      setRemainingTime(43200);
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      await AsyncStorage.removeItem("timerData");
+         if (timerInterval.current) {
+        clearInterval(timerInterval.current);
+        timerInterval.current = null; 
       }
-
       // Cancelar notificaciones de progreso
-      await Notifications.dismissAllNotificationsAsync(); // Asegurarse de cancelar todas las notificaciones activas
+      await Notifications.dismissAllNotificationsAsync();
     } catch (error) {
       console.error("Error deteniendo timer:", error);
     }
+    setTimerRunning(false);
+    setRemainingTime(43200);
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.titleContainer}>
-        <Text style={styles.title}>Selecciona el máximo de horas</Text>
+    <SafeAreaView style={styles.container}>
+      <View style={[styles.titleContainer, timerRunning ? { borderColor: 'grey' } : null]}>
+        <Text style={[styles.title, timerRunning ? { color: 'grey' } : null]}>Selecciona el máximo de horas</Text>
         <Slider
           style={{ width: '100%', height: 70, }}
           minimumValue={6}
           maximumValue={12}
-          value={maxTime}
+          value={maxTime / 3600}
           onSlidingComplete={(value) => {
-            setMaxTime(value)
+            setMaxTime(value * 3600)
           }}
           disabled={timerRunning}
           step={1}
@@ -265,25 +180,20 @@ export default function TimerApp() {
         value={(maxTime - remainingTime) * 100 / maxTime}
         width={200}
         height={200}
-      />
+      />   
       <View style={styles.buttonContainer}>
         {timerRunning ? (
-          <Button
-            title={"Reiniciar"}
-            onPress={() => setShowRestartModal(true)}
-          />
+          <Button title="Detener" onPress={() => setShowRestartModal(true)} color={Colors.primary} />
         ) : (
           <Button
             title={"Iniciar"}
             onPress={() => startTimer(maxTime)}
-            color={Colors.secondary}
+            color={Colors.primary}
           />
         )}
-
-        {timerRunning && <Button title="Detener Timer" onPress={stopTimer} color={Colors.primary} />}
       </View>
-      <ConfirmationModal setShowRestartModal={setShowRestartModal} startTimer={startTimer} showRestartModal={showRestartModal} />
-    </View>
+      <ConfirmationModal setShowRestartModal={setShowRestartModal} stopTimer={stopTimer} showRestartModal={showRestartModal} />
+    </SafeAreaView>
   )
 }
 
