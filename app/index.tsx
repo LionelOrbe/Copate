@@ -19,6 +19,13 @@ Notifications.setNotificationHandler({
   }),
 })
 
+type TimerDataType = {
+  startTime: number;
+  duration: number;
+  maxTime: number;  
+  timerRunning: boolean;
+}
+
 export default function TimerApp() {
   const [timerRunning, setTimerRunning] = useState(false)
   const [maxTime, setMaxTime] = useState(43200)
@@ -60,6 +67,9 @@ export default function TimerApp() {
         const { startTime, duration } = JSON.parse(timerData)
         const currentTime = Date.now()
         const elapsedTime = Math.floor((currentTime - startTime) / 1000)
+        setMaxTime(duration)
+        setRemainingTime(duration - elapsedTime)
+        setTimerRunning(true)
 
         if (elapsedTime < duration) {         
           const remaining = duration - elapsedTime
@@ -90,9 +100,11 @@ export default function TimerApp() {
     try {
       setTimerRunning(true)
  
-      const timerData = {
+      const timerData: TimerDataType = {        
         startTime: Date.now(),
         duration: seconds,
+        maxTime: seconds,
+        timerRunning: true,
       }
 
       await AsyncStorage.setItem("timerData", JSON.stringify(timerData))
