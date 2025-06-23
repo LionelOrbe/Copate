@@ -5,6 +5,7 @@ import * as Notifications from "expo-notifications"
 import { useFocusEffect } from "expo-router"
 import { useCallback, useRef, useState } from "react"
 import { Alert, Button, StyleSheet, Text, View } from "react-native"
+import { Flow } from 'react-native-animated-spinkit'
 import { LiquidGauge } from 'react-native-liquid-gauge'
 import { SafeAreaView } from "react-native-safe-area-context"
 import ConfirmationModal from "./components/ConfirmationModal"
@@ -181,6 +182,7 @@ export default function TimerApp() {
         width={200}
         height={200}
       />   
+      <Flow animating={timerRunning} color={Colors.secondary}/>
       <View style={styles.buttonContainer}>
         {timerRunning ? (
           <Button title="Detener" onPress={() => setShowRestartModal(true)} color={Colors.primary} />
