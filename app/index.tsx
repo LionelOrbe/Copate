@@ -8,6 +8,7 @@ import { Alert, Button, StyleSheet, Text, View } from "react-native"
 import { Flow } from 'react-native-animated-spinkit'
 import { LiquidGauge } from 'react-native-liquid-gauge'
 import { SafeAreaView } from "react-native-safe-area-context"
+import Snackbar from 'react-native-snackbar'
 import ConfirmationModal from "./components/ConfirmationModal"
 
 Notifications.setNotificationHandler({
@@ -22,7 +23,7 @@ Notifications.setNotificationHandler({
 type TimerDataType = {
   startTime: number;
   duration: number;
-  maxTime: number;  
+  maxTime: number;
   timerRunning: boolean;
 }
 
@@ -44,7 +45,7 @@ export default function TimerApp() {
       }
     }
 
-    timerInterval.current = setInterval(() => {   
+    timerInterval.current = setInterval(() => {
       timeLeft -= 1;
       setRemainingTime(timeLeft);
 
@@ -71,7 +72,7 @@ export default function TimerApp() {
         setRemainingTime(duration - elapsedTime)
         setTimerRunning(true)
 
-        if (elapsedTime < duration) {         
+        if (elapsedTime < duration) {
           const remaining = duration - elapsedTime
           setTimerRunning(true)
           setRemainingTime(remaining)
@@ -90,7 +91,7 @@ export default function TimerApp() {
   useFocusEffect(() => {
     checkExistingTimer();
     return () => {
-       if (timerInterval.current) {
+      if (timerInterval.current) {
         clearInterval(timerInterval.current);
       }
     };
@@ -99,8 +100,8 @@ export default function TimerApp() {
   const startTimer = async (seconds: number) => {
     try {
       setTimerRunning(true)
- 
-      const timerData: TimerDataType = {        
+
+      const timerData: TimerDataType = {
         startTime: Date.now(),
         duration: seconds,
         maxTime: seconds,
@@ -112,7 +113,7 @@ export default function TimerApp() {
       await Notifications.scheduleNotificationAsync({
         content: {
           title: "¡El tiempo se ha terminado!",
-          body: `Han pasado ${seconds/3600} horas.`,
+          body: `Han pasado ${seconds / 3600} horas.`,
           sound: true,
         },
         trigger: {
@@ -123,12 +124,12 @@ export default function TimerApp() {
       })
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: "¡Ya paso la mitad del tiempo!",        
+          title: "¡Ya paso la mitad del tiempo!",
           sound: false,
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-          seconds: seconds/2,
+          seconds: seconds / 2,
           repeats: false,
         },
       })
@@ -139,17 +140,22 @@ export default function TimerApp() {
       setTimerRunning(false)
       Alert.alert("Error", "No se pudo iniciar el timer")
     }
+    Snackbar.show({
+      text: `Se ha iniciado el temporizador, ${maxTime / 3600} horas restantes`,
+      duration: Snackbar.LENGTH_SHORT,      
+      textColor: 'wihite',
+    });
   }
 
   const stopTimer = async () => {
     try {
       setTimerRunning(false);
       setRemainingTime(43200);
-      await Notifications.cancelAllScheduledNotificationsAsync();
       await AsyncStorage.removeItem("timerData");
-         if (timerInterval.current) {
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      if (timerInterval.current) {
         clearInterval(timerInterval.current);
-        timerInterval.current = null; 
+        timerInterval.current = null;
       }
       // Cancelar notificaciones de progreso
       await Notifications.dismissAllNotificationsAsync();
@@ -193,8 +199,8 @@ export default function TimerApp() {
         value={(maxTime - remainingTime) * 100 / maxTime}
         width={200}
         height={200}
-      />   
-      <Flow animating={timerRunning} color={Colors.secondary}/>
+      />
+      <Flow animating={timerRunning} color={Colors.secondary} />
       <View style={styles.buttonContainer}>
         {timerRunning ? (
           <Button title="Detener" onPress={() => setShowRestartModal(true)} color={Colors.primary} />
