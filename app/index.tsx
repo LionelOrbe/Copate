@@ -99,7 +99,7 @@ export default function TimerApp() {
 
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: "¡Es hora de limpiarte!",
+          title: "¡El tiempo se ha terminado!",
           body: `Han pasado ${seconds/3600} horas.`,
           sound: true,
         },
@@ -154,7 +154,7 @@ export default function TimerApp() {
         <Text style={[styles.title, timerRunning ? { color: 'grey' } : null]}>Selecciona el máximo de horas</Text>
         <Slider
           style={{ width: '100%', height: 70, }}
-          minimumValue={6}
+          minimumValue={4}
           maximumValue={12}
           value={maxTime / 3600}
           onSlidingComplete={(value) => {
