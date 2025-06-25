@@ -1,4 +1,5 @@
 import { Colors } from "@/assets/Contants/Colors"
+import { GStyles } from "@/assets/Contants/GeneralStyles"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import Slider from '@react-native-community/slider'
 import * as Notifications from "expo-notifications"
@@ -112,7 +113,7 @@ export default function TimerApp() {
 
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: "¡El tiempo se ha terminado!",
+          title: "¡El tiempo ha terminado! 🔔",
           body: `Han pasado ${seconds / 3600} horas.`,
           sound: true,
         },
@@ -168,7 +169,7 @@ export default function TimerApp() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={[styles.titleContainer, timerRunning ? { borderColor: 'grey' } : null]}>
+      <View style={[styles.titleContainer, GStyles.shadow, timerRunning ? { borderColor: 'grey' } : null]}>
         <Text style={[styles.title, timerRunning ? { color: 'grey' } : null]}>Selecciona el máximo de horas</Text>
         <Slider
           style={{ width: '100%', height: 70, }}
@@ -234,35 +235,10 @@ const styles = StyleSheet.create({
   titleContainer: {
     width: "100%",
     borderColor: Colors.primary,
+    backgroundColor: Colors.background,
     borderWidth: 1,
     borderRadius: 10,
-    padding: 10,
-  },
-  timerDisplay: {
-    backgroundColor: "white",
-    padding: 30,
-    borderRadius: 15,
-    marginBottom: 30,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  timeText: {
-    fontSize: 48,
-    fontWeight: "bold",
-    color: "#333",
-    fontFamily: "monospace",
-  },
-  statusText: {
-    fontSize: 16,
-    color: "#666",
-    marginTop: 10,
+    padding: 10,    
   },
   buttonContainer: {
     gap: 15,
