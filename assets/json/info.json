@@ -1,0 +1,6 @@
+{
+    "alarm": {
+        "title": "Alarma",
+        "message": "Si activas la alarma, se te notificará a la hora programada, con una alarma que requiere desactivacion manual. Si la dejas desactivada, recibirás una notificación que no requiere desactivación manual."
+    }
+}

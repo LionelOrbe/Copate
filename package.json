@@ -11,6 +11,7 @@
     "lint": "expo lint"
   },
   "dependencies": {
+    "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-community/slider": "4.5.6",
     "@react-navigation/bottom-tabs": "^7.3.10",
@@ -19,6 +20,7 @@
     "@shopify/react-native-skia": "^2.0.5",
     "d3": "^7.9.0",
     "expo": "~53.0.10",
+    "expo-alarm-module": "^1.2.0",
     "expo-blur": "~14.1.5",
     "expo-constants": "~17.1.6",
     "expo-font": "~13.3.1",

@@ -1,16 +1,19 @@
 import { Colors } from "@/assets/Contants/Colors"
 import { GStyles } from "@/assets/Contants/GeneralStyles"
+import Ionicons from '@expo/vector-icons/Ionicons'
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import Slider from '@react-native-community/slider'
+import { removeAlarm, scheduleAlarm } from "expo-alarm-module"
 import * as Notifications from "expo-notifications"
 import { useFocusEffect } from "expo-router"
 import { useCallback, useRef, useState } from "react"
-import { Alert, Button, StyleSheet, Text, View } from "react-native"
+import { Alert, Button, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 import { Flow } from 'react-native-animated-spinkit'
 import { LiquidGauge } from 'react-native-liquid-gauge'
 import { SafeAreaView } from "react-native-safe-area-context"
 import Snackbar from 'react-native-snackbar'
 import ConfirmationModal from "./components/ConfirmationModal"
+import SettingsModal from "./components/SettingsModal"
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -26,13 +29,16 @@ type TimerDataType = {
   duration: number;
   maxTime: number;
   timerRunning: boolean;
+  alarmOn?: boolean;
 }
 
 export default function TimerApp() {
   const [timerRunning, setTimerRunning] = useState(false)
   const [maxTime, setMaxTime] = useState(43200)
   const [remainingTime, setRemainingTime] = useState(43200)
-  const [showRestartModal, setShowRestartModal] = useState(false)
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [alarmOn, setAlarmOn] = useState(false)
 
   const timerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -66,13 +72,13 @@ export default function TimerApp() {
     try {
       const timerData = await AsyncStorage.getItem("timerData")
       if (timerData) {
-        const { startTime, duration } = JSON.parse(timerData)
+        const { startTime, duration, alarmOn } = JSON.parse(timerData)
         const currentTime = Date.now()
         const elapsedTime = Math.floor((currentTime - startTime) / 1000)
         setMaxTime(duration)
         setRemainingTime(duration - elapsedTime)
         setTimerRunning(true)
-
+        setAlarmOn(alarmOn || false)
         if (elapsedTime < duration) {
           const remaining = duration - elapsedTime
           setTimerRunning(true)
@@ -107,15 +113,19 @@ export default function TimerApp() {
         duration: seconds,
         maxTime: seconds,
         timerRunning: true,
+        alarmOn: alarmOn,
       }
 
       await AsyncStorage.setItem("timerData", JSON.stringify(timerData))
 
-      await Notifications.scheduleNotificationAsync({
+      if (alarmOn) {
+        alarmActivation(seconds)
+      } else await Notifications.scheduleNotificationAsync({
         content: {
           title: "¡El tiempo ha terminado! 🔔",
           body: `Han pasado ${seconds / 3600} horas.`,
           sound: true,
+          vibrate: [0, 500, 250, 250],
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
@@ -143,7 +153,7 @@ export default function TimerApp() {
     }
     Snackbar.show({
       text: `Se ha iniciado el temporizador, ${maxTime / 3600} horas restantes`,
-      duration: Snackbar.LENGTH_SHORT,      
+      duration: Snackbar.LENGTH_SHORT,
       textColor: 'wihite',
     });
   }
@@ -152,6 +162,7 @@ export default function TimerApp() {
     try {
       setTimerRunning(false);
       setRemainingTime(43200);
+      removeAlarm("alarm1");
       await AsyncStorage.removeItem("timerData");
       await Notifications.cancelAllScheduledNotificationsAsync();
       if (timerInterval.current) {
@@ -165,10 +176,34 @@ export default function TimerApp() {
     }
     setTimerRunning(false);
     setRemainingTime(43200);
+    removeAlarm("alarm1");
+  };
+
+  const alarmActivation = (seconds: number) => {
+    let newDate = new Date();
+    newDate.setSeconds(newDate.getSeconds() + seconds);
+    scheduleAlarm(
+      {
+        uid: "alarm1",
+        day: newDate,
+        title: "¡El tiempo ha terminado! 🔔",
+        description: `Han pasado ${seconds / 3600} horas.`,
+        showDismiss: true,
+        showSnooze: true,
+        snoozeInterval: 10,
+        snoozeText: "10 min. más",
+        dismissText: "Desactivar",
+        repeating: true,
+        active: true
+      } as any
+    );
   };
 
   return (
     <SafeAreaView style={styles.container}>
+      <TouchableOpacity onPress={() => setShowSettingsModal(true)} style={{ position: 'absolute', top: 35, right: 15 }} disabled={timerRunning}>
+        <Ionicons name="settings" size={32} color={timerRunning? 'grey' : Colors.primary} />
+      </TouchableOpacity>
       <View style={[styles.titleContainer, GStyles.shadow, timerRunning ? { borderColor: 'grey' } : null]}>
         <Text style={[styles.title, timerRunning ? { color: 'grey' } : null]}>Selecciona el máximo de horas</Text>
         <Slider
@@ -204,7 +239,7 @@ export default function TimerApp() {
       <Flow animating={timerRunning} color={Colors.secondary} />
       <View style={styles.buttonContainer}>
         {timerRunning ? (
-          <Button title="Detener" onPress={() => setShowRestartModal(true)} color={Colors.primary} />
+          <Button title="Detener" onPress={() => setShowConfirmationModal(true)} color={Colors.primary} />
         ) : (
           <Button
             title={"Iniciar"}
@@ -213,7 +248,8 @@ export default function TimerApp() {
           />
         )}
       </View>
-      <ConfirmationModal setShowRestartModal={setShowRestartModal} stopTimer={stopTimer} showRestartModal={showRestartModal} />
+      <ConfirmationModal setShowConfirmationModal={setShowConfirmationModal} stopTimer={stopTimer} showConfirmationModal={showConfirmationModal} />
+      <SettingsModal setShowSettingsModal={setShowSettingsModal} setAlarmOn={setAlarmOn} showSettingsModal={showSettingsModal} alarmOn={alarmOn} />
     </SafeAreaView>
   )
 }
@@ -238,7 +274,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     borderWidth: 1,
     borderRadius: 10,
-    padding: 10,    
+    padding: 10,
   },
   buttonContainer: {
     gap: 15,
