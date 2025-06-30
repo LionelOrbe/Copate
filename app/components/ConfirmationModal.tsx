@@ -3,8 +3,8 @@ import React from 'react'
 import { Button, Modal, StyleSheet, Text, View } from 'react-native'
 
 type ConfirmationModalProps = {
-  showRestartModal: boolean
-  setShowRestartModal: (value: boolean) => void
+  showConfirmationModal: boolean
+  setShowConfirmationModal: (value: boolean) => void
   stopTimer: () => void
 }
 
@@ -13,8 +13,8 @@ const ConfirmationModal = (props: ConfirmationModalProps) => {
      <Modal
              animationType="slide"
              transparent={true}
-             visible={props.showRestartModal}
-             onRequestClose={() => props.setShowRestartModal(false)}
+             visible={props.showConfirmationModal}
+             onRequestClose={() => props.setShowConfirmationModal(false)}
            >
              <View style={styles.modalContainer}>
                <View style={styles.modalContent}>
@@ -22,13 +22,13 @@ const ConfirmationModal = (props: ConfirmationModalProps) => {
                  <View style={styles.modalButtonContainer}>
                    <Button
                      title="Cancelar"
-                     onPress={() => props.setShowRestartModal(false)}
+                     onPress={() => props.setShowConfirmationModal(false)}
                      color="#666"
                    />
                    <Button
                      title="Detener"
                      onPress={() => {
-                       props.setShowRestartModal(false);
+                       props.setShowConfirmationModal(false);
                        props.stopTimer();
                      }}
                      color={Colors.primary}
