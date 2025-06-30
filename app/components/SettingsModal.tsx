@@ -3,6 +3,8 @@ import { GStyles } from '@/assets/Contants/GeneralStyles'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import React, { useEffect, useState } from 'react'
 import { Button, Modal, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native'
+import infodata from '../../assets/json/info.json'
+import InfoModal from './InformationModal'
 
 type SettingsModalProps = {
     showSettingsModal: boolean
@@ -11,8 +13,12 @@ type SettingsModalProps = {
     alarmOn: boolean
 }
 
+type InfoType = keyof typeof infodata;
 
 const SettingsModal = (props: SettingsModalProps) => {
+
+    const [showInfoModal, setShowInfoModal] = useState(false);
+    const [infoType, setInfoType] = useState<InfoType>('alarm');
 
     useEffect(() => {
         setAlarmOn(props.alarmOn);
@@ -33,6 +39,11 @@ const SettingsModal = (props: SettingsModalProps) => {
         props.setShowSettingsModal(false);
     }
 
+    const handleInfo = (type: InfoType) => {
+        setInfoType(type)
+        setShowInfoModal(true);
+    }
+
     return (
         <Modal
             animationType="slide"
@@ -46,11 +57,11 @@ const SettingsModal = (props: SettingsModalProps) => {
                     <View style={styles.itemContainer}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                             <Text style={styles.modalText}>¿Activar alarma?</Text>
-                            <TouchableOpacity>                             
-                            <Ionicons name="information-circle-outline" size={30} color={Colors.primary} />
+                            <TouchableOpacity onPress={() => handleInfo('alarm')}>
+                                <Ionicons name="information-circle-outline" size={30} color={Colors.primary} />
                             </TouchableOpacity>
                         </View>
-                        <Switch value={alarmOn} onChange={onChangeAlarm} thumbColor={alarmOn? Colors.primary : Colors.secondary} trackColor={{ true: Colors.secondary, false: 'white' }} />
+                        <Switch value={alarmOn} onChange={onChangeAlarm} thumbColor={alarmOn ? Colors.primary : Colors.secondary} trackColor={{ true: Colors.secondary, false: 'white' }} />
                     </View>
                     <View style={styles.modalButtonContainer}>
                         <Button
@@ -66,6 +77,12 @@ const SettingsModal = (props: SettingsModalProps) => {
                     </View>
                 </View>
             </View>
+            <InfoModal 
+                setShowInfoModal={setShowInfoModal} 
+                showInfoModal={showInfoModal} 
+                title={infodata[infoType]?.title || 'Título'} 
+                messagge={infodata[infoType]?.message || 'Mensaje'} 
+            />
         </Modal>
     )
 }
